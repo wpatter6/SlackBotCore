@@ -1,25 +1,20 @@
-﻿using SlackBotFull.EventObjects;
-using SlackBotFull.Objects;
+﻿using SlackBotCore.EventObjects;
+using SlackBotCore.Objects;
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
 using System.Web;
 
-namespace SlackBotFull
+namespace SlackBotCore
 {
     public class SlackBot
     {
-        private string urlBase = "https://slack.com/api/";
-        private SlackBotMessageSocketConnection messageConnection;
-        private Dictionary<BotApiCommands, string> CommandDictionary = new Dictionary<BotApiCommands, string>(new KeyValuePair<BotApiCommands, string>[]
-        {
-            new KeyValuePair<BotApiCommands, string>(BotApiCommands.Message, "rtm.start")
-        });
+        private SlackBotSocket socket;
+        private SlackBotApi api;
 
-
-        private string _token;
-        private dynamic _teamData;
+        private dynamic teamData;
 
         public SlackUser User { get; private set; }
 
@@ -27,91 +22,130 @@ namespace SlackBotFull
 
         public SlackBot(string token)
         {
-            _token = token;
-            messageConnection = new SlackBotMessageSocketConnection();
-            messageConnection.DataReceived += Connection_DataReceived;
-            Task.WaitAll(Connect());
+            api = new SlackBotApi(token);
+            socket = new SlackBotSocket();
+            socket.DataReceived += Socket_DataReceived;
         }
         
-        public async Task SendMessage(string message, SlackChannel channel, SlackUser user = null)
+        public async Task SendMessageAsync(string message, SlackChannel channel, SlackUser user = null)
         {
             if (user == null) user = User;
-            await messageConnection.SendMessage(message, channel, user);
+            await socket.SendSocketMessage(message, channel, user);
         }
 
-        private async Task Connect()
+        public async Task<IDisposable> Connect()
         {
-            var messageUri = GetApiUri(BotApiCommands.Message, new KeyValuePair<string, string>("token", _token));
-            _teamData = await messageConnection.GetChatWebSocketData(messageUri);
+            teamData = await api.GetConnectionAsync();
 
             User = new SlackUser()
             {
-                Id = _teamData.self.Value<string>("id"),
-                Name = _teamData.self.Value<string>("name")
+                Id = teamData.self.Value<string>("id"),
+                Name = teamData.self.Value<string>("name")
             };
 
-            Team = SlackTeam.FromData(_teamData);
+            Team = SlackTeam.FromData(teamData);
 
-            var url = _teamData["url"];
+            var url = teamData["url"];
 
             if (url == null) throw new Exception("Url not returned from slack api.");
-
-            await messageConnection.ConnectToChat(new Uri(url.ToString()));
+            
+            return await socket.ConnectSocket(new Uri(url.ToString()));
         }
 
-        private void Connection_DataReceived(object sender, dynamic data)
+        public async Task Disconnect()
         {
-            var type = data.type.ToString();
+            await socket.CloseSocket();
+        }
 
-            switch (type)
+        private void Socket_DataReceived(object sender, dynamic data)
+        {
+            var type = data.Value<string>("type");
+            
+            switch (type)//todo more from https://api.slack.com/rtm
             {
-                case "user_typing"://todo
-                    break;
-                case "presence_change"://todo
-                    break;
                 case "message":
-
-                    //var args = new MessageReceivedEventArgs(data.message.ToString(), data
-                    OnMessageReceived(null);
+                case "message.channels":
+                case "message.groups":
+                case "message.im":
+                case "message.mpim":
+                    MessageReceived?.Invoke(this, new MessageReceivedEventArgs(MakeMessageFromData(data)));
+                    break;
+                case "reaction_added":
+                    ReactionAdded?.Invoke(this, GetReactionAddedEventArgs(data));
+                    break;
+                case "reaction_removed":
+                    ReactionRemoved?.Invoke(this, GetReactionAddedEventArgs(data));
+                    break;
+                case "star_added":
+                    StarAdded?.Invoke(this, GetReactionAddedEventArgs(data));
+                    break;
+                case "star_removed":
+                    StarRemoved?.Invoke(this, GetReactionAddedEventArgs(data));
+                    break;
+                case "pin_added":
+                    PinAdded?.Invoke(this, GetReactionAddedEventArgs(data));
+                    break;
+                case "pin_removed":
+                    PinRemoved?.Invoke(this, GetReactionAddedEventArgs(data));
+                    break;
+                case "team_join":
+                    UserJoined?.Invoke(this, new UserDataReceivedEventArgs(Team.Users.FirstOrDefault(x => x.Id == data.Value<string>("user")), null, Team));
+                    break;
+                case "user_typing":
+                    UserTyping?.Invoke(this, new UserDataReceivedEventArgs(Team.Users.FirstOrDefault(x => x.Id == data.Value<string>("user")),
+                        Team.Channels.FirstOrDefault(x => x.Id == data.Value<string>("channel")), Team));
+                    break;
+                case "presence_change":
+                    UserPresenceChanged?.Invoke(this, new UserPresenceChangeEventArgs(data.Value<string>("presence"),
+                        Team.Users.FirstOrDefault(x => x.Id == data.Value<string>("user"))));
                     break;
             }
         }
 
-        private Uri GetApiUri(BotApiCommands commandType, params KeyValuePair<string, string>[] querystringParameters)
+        private SlackMessage MakeMessageFromData(dynamic data, string userid = null)
         {
-            var builder = new UriBuilder(string.Format("{0}{1}", urlBase, CommandDictionary[commandType]));
-
-            var query = HttpUtility.ParseQueryString(builder.Query);
-
-            foreach(var param in querystringParameters)
-            {
-                query[param.Key] = param.Value;
-            }
-            builder.Query = query.ToString();
-
-            return builder.Uri;
+            var uid = userid ?? data.Value<string>("user");
+            return new SlackMessage(data.Value<string>("ts"), data.Value<string>("text"),
+                Team.Channels.FirstOrDefault(x => x.Id == data.Value<string>("channel")),
+                Team.Users.FirstOrDefault(x => x.Id == uid), DateTime.UtcNow);
         }
 
+        private ReactionAddedEventArgs GetReactionAddedEventArgs(dynamic data)
+        {
+            var type = data.Value<string>("type");
+            var item = data.item;
+            ReactionAddedEventArgs args;
+            var reaction = data["reaction"]?.ToString() ?? type;
+            switch (item.Value<string>("type"))
+            {
+                case "file":
+                    args = new ReactionAddedEventArgs(reaction,
+                        new SlackFile(data.item.Value<string>("file"),
+                        Team.Users.FirstOrDefault(x => x.Id == data.Value<string>("item_user"))));
+                    break;
+                default:
+                    args = new ReactionAddedEventArgs(reaction,
+                        Team.Users.FirstOrDefault(x => x.Id == data.Value<string>("user")),
+                        MakeMessageFromData(data.item, data.Value<string>("item_user")));
+                    break;
+            }
+            return args;
+        }
 
         public delegate void MessageReceivedEventHandler(object sender, MessageReceivedEventArgs e);
         public delegate void UserDataReceivedEventHandler(object sender, UserDataReceivedEventArgs e);
+        public delegate void UserPresenceChangedEventHandler(object sender, UserPresenceChangeEventArgs e);
+        public delegate void ReactionAddedEventHandler(object sender, ReactionAddedEventArgs e);
 
-        protected virtual void OnMessageReceived(MessageReceivedEventArgs e)
-        {
-            MessageReceived?.Invoke(this, e);
-        }
         public event MessageReceivedEventHandler MessageReceived;
-        
-        protected virtual void OnUserTyping(UserDataReceivedEventArgs e)
-        {
-            UserTyping?.Invoke(this, e);
-        }
         public event UserDataReceivedEventHandler UserTyping;
-    }
-
-    public enum BotApiCommands
-    {
-        Message,
-        Delete
+        public event UserDataReceivedEventHandler UserJoined;
+        public event UserPresenceChangedEventHandler UserPresenceChanged;
+        public event ReactionAddedEventHandler ReactionAdded;
+        public event ReactionAddedEventHandler ReactionRemoved;
+        public event ReactionAddedEventHandler StarAdded;
+        public event ReactionAddedEventHandler StarRemoved;
+        public event ReactionAddedEventHandler PinAdded;
+        public event ReactionAddedEventHandler PinRemoved;
     }
 }

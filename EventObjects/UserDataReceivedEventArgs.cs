@@ -1,7 +1,7 @@
-﻿using SlackBotFull.Objects;
+﻿using SlackBotCore.Objects;
 using System;
 
-namespace SlackBotFull.EventObjects
+namespace SlackBotCore.EventObjects
 {
     public class UserDataReceivedEventArgs : EventArgs
     {

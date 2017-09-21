@@ -3565,7 +3565,7 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\Will Patterson\\.nuget\\packages\\": {},
+    "C:\\Users\\Home\\.nuget\\packages\\": {},
     "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder": {}
   },
   "project": {
@@ -3574,17 +3574,17 @@
       "hideWarningsAndErrors": true
     },
     "restore": {
-      "projectUniqueName": "C:\\Users\\Will Patterson\\Desktop\\SlackBotFull\\SlackBotFull\\SlackBotFull.csproj",
-      "projectName": "SlackBotFull",
-      "projectPath": "C:\\Users\\Will Patterson\\Desktop\\SlackBotFull\\SlackBotFull\\SlackBotFull.csproj",
-      "packagesPath": "C:\\Users\\Will Patterson\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\Will Patterson\\Desktop\\SlackBotFull\\SlackBotFull\\obj\\",
+      "projectUniqueName": "C:\\Users\\Home\\Desktop\\SlackBotFull\\SlackBotCore.csproj",
+      "projectName": "SlackBotCore",
+      "projectPath": "C:\\Users\\Home\\Desktop\\SlackBotFull\\SlackBotCore.csproj",
+      "packagesPath": "C:\\Users\\Home\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\Home\\Desktop\\SlackBotFull\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
       ],
       "configFilePaths": [
-        "C:\\Users\\Will Patterson\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Users\\Home\\AppData\\Roaming\\NuGet\\NuGet.Config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
       "originalTargetFrameworks": [
@@ -3592,9 +3592,8 @@
       ],
       "sources": {
         "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-        "C:\\Users\\Will Patterson\\Downloads": {},
-        "https://api.nuget.org/v3/index.json": {},
-        "https://dotnet.myget.org/F/dotnet-core/api/v3/index.json": {}
+        "C:\\Users\\Home\\Documents\\SVN\\Framework\\Lib\\Nupkg": {},
+        "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
         "netcoreapp2.0": {

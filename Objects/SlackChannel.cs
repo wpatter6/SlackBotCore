@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace SlackBotFull.Objects
+namespace SlackBotCore.Objects
 {
     public class SlackChannel
     {

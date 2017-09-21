@@ -1,18 +1,20 @@
-﻿using SlackBotFull.Objects;
+﻿using SlackBotCore.Objects;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace SlackBotFull.EventObjects
+namespace SlackBotCore.EventObjects
 {
     public class MessageReceivedEventArgs : UserDataReceivedEventArgs
     {
-        public readonly string Message;
+        public readonly SlackMessage Message;
+        public readonly string Content;
 
-        public MessageReceivedEventArgs(string message, SlackUser user, SlackChannel channel, SlackTeam team)
-            : base(user, channel, team)
+        public MessageReceivedEventArgs(SlackMessage message)
+            : base(message.User, message.Channel, message.Channel.Team)
         {
             Message = message;
+            Content = message.Content;
         }
     }
 }
