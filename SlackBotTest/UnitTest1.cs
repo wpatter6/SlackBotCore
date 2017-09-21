@@ -9,7 +9,7 @@ namespace SlackBotTest
     public class UnitTest1
     {
         [TestMethod]
-        public async Task ConnectDisconnect()
+        public async Task ConnectDisconnectWithToken()
         {
             var bot = GetBot();
 
@@ -20,11 +20,22 @@ namespace SlackBotTest
             await bot.Disconnect();
         }
 
+        [TestMethod]
+        public async Task SendMessage()
+        {
+            var bot = GetBot();
+
+            await bot.Connect();
+
+            var msg = await bot.SendMessageAsync(bot.Team.GetChannel("C702Y1WG4"), "_TEST_ *MESSAGE!* <http://www.google.com|LINK!>");
+
+            await bot.Disconnect();
+        }
         private SlackBot GetBot()
         {
             return new SlackBot(_testToken);
         }
 
-        private const string _testToken = "xoxb-244064150499-sPdob5PnERib9nmMjwwn3JOq";
+        private const string _testToken = "xoxb-244064150499-2FH8zNlUnPwt2AhQy9iDVYEq";
     }
 }

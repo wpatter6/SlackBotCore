@@ -16,9 +16,16 @@ namespace SlackBotCore
 
         private dynamic teamData;
 
-        public SlackUser User { get; private set; }
+        public SlackUser BotUser { get; private set; }
 
         public SlackTeam Team { get; private set; }
+
+        public SlackBot(string clientId, string clientSecret)
+        {
+            api = new SlackBotApi(clientId, clientSecret);
+            socket = new SlackBotSocket();
+            socket.DataReceived += Socket_DataReceived;
+        }
 
         public SlackBot(string token)
         {
@@ -27,22 +34,23 @@ namespace SlackBotCore
             socket.DataReceived += Socket_DataReceived;
         }
         
-        public async Task SendMessageAsync(string message, SlackChannel channel)
+        public async Task<SlackMessage> SendMessageAsync(SlackChannel channel, string message)
         {
-            await api.SendMessageAsync(channel.Id, message);
+            return await api.SendMessageAsync(channel, message);
         }
 
         public async Task<IDisposable> Connect()
         {
             teamData = await api.GetConnectionAsync();
 
-            User = new SlackUser()
+
+            BotUser = new SlackUser()
             {
                 Id = teamData.self.Value<string>("id"),
                 Name = teamData.self.Value<string>("name")
             };
 
-            Team = SlackTeam.FromData(teamData);
+            Team = SlackTeam.FromData(teamData, api);
 
             var url = teamData["url"];
 
@@ -104,9 +112,9 @@ namespace SlackBotCore
         private SlackMessage MakeMessageFromData(dynamic data, string userid = null)
         {
             var uid = userid ?? data.Value<string>("user");
-            return new SlackMessage(data.Value<string>("ts"), data.Value<string>("text"),
+            return new SlackMessage(api, data.Value<string>("ts"), data.Value<string>("text"),
                 Team.Channels.FirstOrDefault(x => x.Id == data.Value<string>("channel")),
-                Team.Users.FirstOrDefault(x => x.Id == uid), DateTime.UtcNow);
+                Team.Users.FirstOrDefault(x => x.Id == uid));
         }
 
         private ReactionAddedEventArgs GetReactionAddedEventArgs(dynamic data)

@@ -74,12 +74,12 @@ namespace SlackBotCore
                 Thread.Sleep(10);
                 if (--i <= 0) return;
             }
-            while (socket.State == WebSocketState.Open)
+            try
             {
-                try
+                while (socket.State == WebSocketState.Open)
                 {
                     var received = await socket.ReceiveAsync(buffer, CancellationToken.None);
-                
+
                     if (received.MessageType == WebSocketMessageType.Close)
                     {
                         await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "NormalClosure", CancellationToken.None);
@@ -89,14 +89,15 @@ namespace SlackBotCore
                         var messageBytes = buffer.Skip(buffer.Offset).Take(received.Count).ToArray();
 
                         var rawMessage = new UTF8Encoding().GetString(messageBytes);
-                        botsocket.OnDataReceived(JObject.Parse(rawMessage));
+                        if (!string.IsNullOrWhiteSpace(rawMessage))
+                            botsocket.OnDataReceived(JObject.Parse(rawMessage));
                     }
                 }
-                catch (Exception e)
-                {
-                    if (e is TaskCanceledException) return;
-                    else throw e;
-                }
+            }
+            catch (Exception e)
+            {
+                if (e is TaskCanceledException) return;
+                else throw e;
             }
         }
     }

@@ -14,7 +14,7 @@ namespace SlackBotCore.EventObjects
             : base(message.User, message.Channel, message.Channel.Team)
         {
             Message = message;
-            Content = message.Content;
+            Content = message.Text;
         }
     }
 }
