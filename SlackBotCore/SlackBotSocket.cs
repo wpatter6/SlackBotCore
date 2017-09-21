@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Linq;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
-using SlackBotCore.Objects;
 
 namespace SlackBotCore
 {
@@ -15,10 +13,9 @@ namespace SlackBotCore
         private ClientWebSocket socket;
         private Thread socketThread;
 
-        public async Task<IDisposable> ConnectSocket(Uri uri)
+        public async Task<IDisposable> OpenSocket(Uri uri)
         {
-            int failCount = 0, maxFails = 5, seconds = 2;
-            
+            int failCount = 0, maxFails = 3, seconds = 2;
             while (failCount < maxFails)
             {
                 try
@@ -36,9 +33,12 @@ namespace SlackBotCore
                 catch (Exception e)
                 {
                     failCount++;
+                    if (failCount == maxFails) throw e;
+
                     Thread.Sleep(seconds * 1000);
                 }
             }
+            
             return new SocketDisposer(this);
         }
 
@@ -51,29 +51,6 @@ namespace SlackBotCore
                 socketThread.Abort();
         }
         
-        public async Task<SlackMessage> SendSocketMessage(string message, SlackChannel channel, SlackUser user)
-        {
-            var outbound = new
-            {
-                id = Guid.NewGuid().ToString(),
-                type = "message",
-                channel = channel,
-                text = message
-            };
-
-            var outboundBytes = Encoding.UTF8.GetBytes(Newtonsoft.Json.JsonConvert.SerializeObject(outbound));
-            var outboundBuffer = new ArraySegment<byte>(outboundBytes);
-
-            await SendSocketData(outboundBuffer);
-
-            return new SlackMessage(message, channel, user, DateTime.UtcNow);
-        }
-
-        public async Task SendSocketData(ArraySegment<byte> data)
-        {
-            await socket.SendAsync(data, WebSocketMessageType.Text, true, CancellationToken.None);
-        }
-
         public virtual void OnDataReceived(dynamic e)
         {
             DataReceived?.Invoke(this, e);
@@ -91,23 +68,34 @@ namespace SlackBotCore
 
         private async static void HandleSocket(SlackBotSocket botsocket, ClientWebSocket socket, ArraySegment<byte> buffer)
         {
+            var i = 300;
             while(socket.State != WebSocketState.Open)
             {
                 Thread.Sleep(10);
+                if (--i <= 0) return;
             }
             while (socket.State == WebSocketState.Open)
             {
-                var received = await socket.ReceiveAsync(buffer, CancellationToken.None);
-                if (received.MessageType == WebSocketMessageType.Close)
+                try
                 {
-                    await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "NormalClosure", CancellationToken.None);
-                }
-                else
-                {
-                    var messageBytes = buffer.Skip(buffer.Offset).Take(received.Count).ToArray();
+                    var received = await socket.ReceiveAsync(buffer, CancellationToken.None);
+                
+                    if (received.MessageType == WebSocketMessageType.Close)
+                    {
+                        await socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "NormalClosure", CancellationToken.None);
+                    }
+                    else
+                    {
+                        var messageBytes = buffer.Skip(buffer.Offset).Take(received.Count).ToArray();
 
-                    var rawMessage = new UTF8Encoding().GetString(messageBytes);
-                    botsocket.OnDataReceived(JObject.Parse(rawMessage));
+                        var rawMessage = new UTF8Encoding().GetString(messageBytes);
+                        botsocket.OnDataReceived(JObject.Parse(rawMessage));
+                    }
+                }
+                catch (Exception e)
+                {
+                    if (e is TaskCanceledException) return;
+                    else throw e;
                 }
             }
         }

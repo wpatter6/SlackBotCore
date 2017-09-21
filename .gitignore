@@ -1,3 +1,12 @@
+*.config
+*.db
+**/bin/**
+**/obj/**
+**/.vs/**
+*.pubxml
+*.user
+**/Releases/**
+
 # Windows image file caches
 Thumbs.db
 ehthumbs.db

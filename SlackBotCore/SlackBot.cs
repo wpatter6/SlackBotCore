@@ -27,10 +27,9 @@ namespace SlackBotCore
             socket.DataReceived += Socket_DataReceived;
         }
         
-        public async Task SendMessageAsync(string message, SlackChannel channel, SlackUser user = null)
+        public async Task SendMessageAsync(string message, SlackChannel channel)
         {
-            if (user == null) user = User;
-            await socket.SendSocketMessage(message, channel, user);
+            await api.SendMessageAsync(channel.Id, message);
         }
 
         public async Task<IDisposable> Connect()
@@ -49,7 +48,7 @@ namespace SlackBotCore
 
             if (url == null) throw new Exception("Url not returned from slack api.");
             
-            return await socket.ConnectSocket(new Uri(url.ToString()));
+            return await socket.OpenSocket(new Uri(url.ToString()));
         }
 
         public async Task Disconnect()

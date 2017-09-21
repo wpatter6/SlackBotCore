@@ -1,9 +1,0 @@
-C:\Users\Home\Desktop\SlackBotFull\bin\Debug\netcoreapp2.0\SlackBotCore.deps.json
-C:\Users\Home\Desktop\SlackBotFull\bin\Debug\netcoreapp2.0\SlackBotCore.dll
-C:\Users\Home\Desktop\SlackBotFull\bin\Debug\netcoreapp2.0\SlackBotCore.pdb
-C:\Users\Home\Desktop\SlackBotFull\obj\Debug\netcoreapp2.0\SlackBotCore.csprojResolveAssemblyReference.cache
-C:\Users\Home\Desktop\SlackBotFull\obj\Debug\netcoreapp2.0\SlackBotCore.csproj.CoreCompileInputs.cache
-C:\Users\Home\Desktop\SlackBotFull\obj\Debug\netcoreapp2.0\SlackBotCore.AssemblyInfoInputs.cache
-C:\Users\Home\Desktop\SlackBotFull\obj\Debug\netcoreapp2.0\SlackBotCore.AssemblyInfo.cs
-C:\Users\Home\Desktop\SlackBotFull\obj\Debug\netcoreapp2.0\SlackBotCore.dll
-C:\Users\Home\Desktop\SlackBotFull\obj\Debug\netcoreapp2.0\SlackBotCore.pdb
