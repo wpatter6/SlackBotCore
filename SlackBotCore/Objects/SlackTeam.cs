@@ -10,6 +10,8 @@ namespace SlackBotCore.Objects
     {
         [JsonIgnore]
         private SlackBotApi api;
+        [JsonIgnore]
+        public SlackUser BotUser;
 
         [JsonProperty("id")]
         public string Id;
@@ -26,8 +28,9 @@ namespace SlackBotCore.Objects
         [JsonIgnore]
         public List<SlackUser> Users = new List<SlackUser>();
 
-        public SlackTeam(SlackBotApi api)
+        public SlackTeam(SlackBotApi api, SlackUser user = null)
         {
+            BotUser = user;
             this.api = api;
         }
 
@@ -47,7 +50,12 @@ namespace SlackBotCore.Objects
             {
                 Id = data.team.Value<string>("id"),
                 Name = data.team.Value<string>("name"),
-                Domain = data.team.Value<string>("domain")
+                Domain = data.team.Value<string>("domain"),
+                BotUser = new SlackUser()
+                {
+                    Id = data.self.Value<string>("id"),
+                    Name = data.self.Value<string>("name")
+                }
             };
 
             foreach(var u in data.users)
@@ -63,7 +71,7 @@ namespace SlackBotCore.Objects
             foreach(var c in data.channels)
             {
                 if (c == null) continue;
-                var channel = new SlackChannel(api)
+                var channel = new SlackChannel(api, team.BotUser)
                 {
                     Id = c.Value<string>("id"),
                     Name = c.Value<string>("name"),

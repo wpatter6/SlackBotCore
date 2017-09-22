@@ -3,7 +3,6 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 using System.Web;
 using SlackBotCore.Objects;
@@ -23,11 +22,6 @@ namespace SlackBotCore
 
     public class SlackBotApi
     {
-        public SlackBotApi(string clientId, string clientSecret)
-        {
-
-        }
-
         public SlackBotApi(string token)
         {
             this.token = token;
@@ -36,45 +30,48 @@ namespace SlackBotCore
         #region public
         public async Task<SlackMessage> SendMessageAsync(SlackMessage message)
         {
-            return await SendMessageAsync(message.Channel, message.Text, message.EnableMarkdown, message.Attachments.ToArray());
+            return await SendMessageAsync(message.Channel, message.User, message.Text, message.Attachments.ToArray());
         }
 
-        public async Task<SlackMessage> SendMessageAsync(SlackChannel channel, string text, bool enableMarkdown = true, params SlackAttachment[] attachments)
+        public async Task<SlackMessage> SendMessageAsync(SlackChannel channel, SlackUser user, string text, params SlackAttachment[] attachments)
         {
             List<KeyValuePair<string, string>> parameters = new List<KeyValuePair<string, string>>();
 
             parameters.Add(new KeyValuePair<string, string>("channel", channel.Id));
             parameters.Add(new KeyValuePair<string, string>("text", text));
-            parameters.Add(new KeyValuePair<string, string>("mrkdwn", enableMarkdown.ToString().ToLower()));
             parameters.Add(new KeyValuePair<string, string>("as_user", "true"));
 
             if (attachments.Length > 0)
                 parameters.Add(new KeyValuePair<string, string>("attachments", JArray.FromObject(attachments).ToString(Formatting.None)));
+            
+            var result = await GetApiDataProperty<SlackMessage>(ApiCommands.Message, "message", new string[] { "user", "channel" }, parameters.ToArray());
 
-            var result = await GetApiData<SlackMessage>(ApiCommands.Message, parameters.ToArray());
+            if (result == default(SlackMessage)) return default(SlackMessage);
+            result.SetApi(this);
             result.Timestamp = DateTime.UtcNow;
             result.Channel = channel;
+            result.User = user;
             return result;
         }
 
         public async Task<SlackMessage> UpdateMessageAsync(SlackMessage message)
         {
-            return await UpdateMessageAsync(message.Channel, message.Id, message.Text, message.EnableMarkdown, message.Attachments.ToArray());
+            return await UpdateMessageAsync(message.Channel, message.Id, message.Text, message.Attachments.ToArray());
         }
 
-        public async Task<SlackMessage> UpdateMessageAsync(SlackChannel channel, string ts, string text, bool enableMarkdown = true, params SlackAttachment[] attachments)
+        public async Task<SlackMessage> UpdateMessageAsync(SlackChannel channel, string ts, string text, params SlackAttachment[] attachments)
         {
             List<KeyValuePair<string, string>> parameters = new List<KeyValuePair<string, string>>();
 
+            parameters.Add(new KeyValuePair<string, string>("ts", ts));
             parameters.Add(new KeyValuePair<string, string>("channel", channel.Id));
             parameters.Add(new KeyValuePair<string, string>("text", text));
-            parameters.Add(new KeyValuePair<string, string>("mrkdwn", enableMarkdown.ToString().ToLower()));
             parameters.Add(new KeyValuePair<string, string>("as_user", "true"));
 
             if (attachments.Length > 0)
                 parameters.Add(new KeyValuePair<string, string>("attachments", JArray.FromObject(attachments).ToString(Formatting.None)));
 
-            var result = await GetApiData<SlackMessage>(ApiCommands.Update, parameters.ToArray());
+            var result = await GetApiData<SlackMessage>(ApiCommands.Update, null, parameters.ToArray());
             result.Channel = channel;
             return result;
         }
@@ -86,7 +83,7 @@ namespace SlackBotCore
 
         public async Task DeleteMessageAsync(string channel, string ts)
         {
-            await GetApiData(ApiCommands.Delete,
+            await GetApiData(ApiCommands.Delete, null,
                 new KeyValuePair<string, string>("channel", channel),
                 new KeyValuePair<string, string>("ts", ts));
         }
@@ -101,7 +98,6 @@ namespace SlackBotCore
         private string token;
         private string urlBase = "https://slack.com/api/";
         
-
         private Dictionary<ApiCommands, string> CommandDictionary = new Dictionary<ApiCommands, string>(new KeyValuePair<ApiCommands, string>[]
         {
             new KeyValuePair<ApiCommands, string>(ApiCommands.Connect, "rtm.start"),
@@ -111,22 +107,45 @@ namespace SlackBotCore
             new KeyValuePair<ApiCommands, string>(ApiCommands.Token, "oauth.access")
         });
 
-        private async Task<JObject> GetApiData(ApiCommands commandType, params KeyValuePair<string, string>[] queryParameters)
+        private async Task<TResult> GetApiDataProperty<TResult>(ApiCommands commandType, string propertyName, string [] ignoreProperties = null, params KeyValuePair<string, string>[] queryParameters)
         {
-            return await GetApiData<JObject>(commandType, queryParameters);
+            var jobj = await GetApiData(commandType, null, queryParameters);
+
+            if (jobj[propertyName] == null) return default(TResult);
+
+            var jtoken = jobj[propertyName];
+
+            if (ignoreProperties != null)
+            {
+                foreach (var property in ignoreProperties)
+                {
+                    var prop = jtoken.Children<JProperty>().FirstOrDefault(x => x.Name == property);
+                    if (prop != null)
+                    {
+                        prop.Remove();
+                    }
+                }
+            }
+
+            return DeserializeJson<TResult>(jtoken);
+        }
+        
+        private async Task<JObject> GetApiData(ApiCommands commandType, string[] ignoreProperties = null, params KeyValuePair<string, string>[] queryParameters)
+        {
+            return await GetApiData<JObject>(commandType, ignoreProperties, queryParameters);
         }
 
-        private async Task<TResult> GetApiData<TResult>(ApiCommands commandType, params KeyValuePair<string, string>[] queryParameters)
+        private async Task<TResult> GetApiData<TResult>(ApiCommands commandType, string[] ignoreProperties = null, params KeyValuePair<string, string>[] queryParameters)
         {
-            return await GetApiData<TResult>(GetApiUri(commandType, queryParameters));
+            return await GetApiData<TResult>(GetApiUri(commandType, queryParameters), ignoreProperties);
         }
 
-        private async Task<JObject> GetApiData(Uri uri)
+        private async Task<JObject> GetApiData(Uri uri, string[] ignoreProperties = null)
         {
-            return await GetApiData<JObject>(uri);
+            return await GetApiData<JObject>(uri, ignoreProperties);
         }
 
-        private async Task<TResult> GetApiData<TResult>(Uri uri)
+        private async Task<TResult> GetApiData<TResult>(Uri uri, string[] ignoreProperties = null)
         {
             var result = await new HttpClient().GetAsync(uri.ToString());
             var json = await result.Content.ReadAsStringAsync();
@@ -135,21 +154,31 @@ namespace SlackBotCore
             if (jobj["ok"] != null && !jobj.Value<bool>("ok"))
                 throw new Exception($"An error occurred calling the slack API: {json}");
 
-            return jobj.ToObject<TResult>();
+
+            if (ignoreProperties != null)
+            {
+                foreach (var property in ignoreProperties)
+                {
+                    var prop = jobj.Children<JProperty>().FirstOrDefault(x => x.Name == property);
+                    if (prop != null)
+                    {
+                        prop.Remove();
+                    }
+                }
+            }
+
+            return DeserializeJson<TResult>(jobj);
         }
-
-        private IgnorableSerializerContractResolver jsonIgnores;
-
-        private IgnorableSerializerContractResolver GetIgnores()
+        
+        private TResult DeserializeJson<TResult>(JToken jobj)
         {
-            if (jsonIgnores != null) return jsonIgnores;
+            var settings = new JsonSerializerSettings
+            {
+                ContractResolver = new GetOnlyContractResolver(),
+                NullValueHandling = NullValueHandling.Ignore
+            };
 
-            jsonIgnores = new IgnorableSerializerContractResolver();
-            jsonIgnores.Ignore(typeof(SlackMessage), "Channel", "User", "channel", "user");
-            jsonIgnores.Ignore(typeof(SlackChannel), "Team", "team");
-            jsonIgnores.Ignore(typeof(SlackTeam), "Channels", "channels", "Users", "users");
-
-            return jsonIgnores;
+            return jobj.ToObject<TResult>(JsonSerializer.Create(settings));
         }
 
         private Uri GetApiUri(ApiCommands commandType, params KeyValuePair<string, string>[] queryParameters)

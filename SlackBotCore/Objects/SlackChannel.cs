@@ -11,6 +11,8 @@ namespace SlackBotCore.Objects
     {
         [JsonIgnore]
         private SlackBotApi api;
+        [JsonIgnore]
+        private SlackUser user;
 
         [JsonProperty("id")]
         public string Id;
@@ -30,14 +32,15 @@ namespace SlackBotCore.Objects
         [JsonIgnore]
         public List<SlackUser> Members = new List<SlackUser>();
 
-        public SlackChannel(SlackBotApi api)
+        public SlackChannel(SlackBotApi api, SlackUser user)
         {
             this.api = api;
+            this.user = user;
         }
 
-        public async Task<SlackMessage> SendMessageAsync(string message, bool disableMarkdown = false)
+        public async Task<SlackMessage> SendMessageAsync(string text, params SlackAttachment[] attachments)
         {
-            return await api.SendMessageAsync(this, message);
+            return await api.SendMessageAsync(this, user, text, attachments);
         }
     }
 }

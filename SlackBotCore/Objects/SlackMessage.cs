@@ -10,15 +10,19 @@ namespace SlackBotCore.Objects
     public class SlackMessage
     {
         [JsonIgnore]
+        [GetOnlyJsonProperty]
         private SlackBotApi api;
 
         [JsonIgnore]
+        [GetOnlyJsonProperty]
         public SlackChannel Channel;
 
         [JsonIgnore]
+        [GetOnlyJsonProperty]
         public SlackUser User;
 
         [JsonIgnore]
+        [GetOnlyJsonProperty]
         public DateTime Timestamp;
 
         [JsonProperty("ts")]
@@ -30,10 +34,9 @@ namespace SlackBotCore.Objects
         [JsonProperty("attachments")]
         public List<SlackAttachment> Attachments;
 
-        [JsonProperty("mrkdwn")]
-        public bool EnableMarkdown;
+        public SlackMessage() { }
 
-        public SlackMessage(SlackBotApi api, string id, string text, SlackChannel channel, SlackUser user, bool enableMarkdown = true, DateTime? timestamp = null, params SlackAttachment[] attachments)
+        public SlackMessage(SlackBotApi api, string id, string text, SlackChannel channel, SlackUser user, DateTime? timestamp = null, params SlackAttachment[] attachments)
         {
             this.api = api;
             Id = id;
@@ -42,9 +45,13 @@ namespace SlackBotCore.Objects
             User = user;
             Timestamp = timestamp ?? DateTime.UtcNow;
             Attachments = new List<SlackAttachment>(attachments);
-            EnableMarkdown = enableMarkdown;
         }
         
+        public void SetApi(SlackBotApi api)
+        {
+            this.api = api;
+        }
+
         public async Task DeleteAsync()
         {
             await api.DeleteMessageAsync(Channel.Id, Id);

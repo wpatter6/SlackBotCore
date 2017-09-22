@@ -20,12 +20,12 @@ namespace SlackBotCore
 
         public SlackTeam Team { get; private set; }
 
-        public SlackBot(string clientId, string clientSecret)
-        {
-            api = new SlackBotApi(clientId, clientSecret);
-            socket = new SlackBotSocket();
-            socket.DataReceived += Socket_DataReceived;
-        }
+        //public SlackBot(string clientId, string clientSecret)
+        //{
+        //    api = new SlackBotApi(clientId, clientSecret);
+        //    socket = new SlackBotSocket();
+        //    socket.DataReceived += Socket_DataReceived;
+        //}
 
         public SlackBot(string token)
         {
@@ -34,9 +34,9 @@ namespace SlackBotCore
             socket.DataReceived += Socket_DataReceived;
         }
         
-        public async Task<SlackMessage> SendMessageAsync(SlackChannel channel, string message)
+        public async Task<SlackMessage> SendMessageAsync(SlackChannel channel, string message, params SlackAttachment[] attachments)
         {
-            return await api.SendMessageAsync(channel, message);
+            return await api.SendMessageAsync(channel, BotUser, message, attachments);
         }
 
         public async Task<IDisposable> Connect()
@@ -44,11 +44,6 @@ namespace SlackBotCore
             teamData = await api.GetConnectionAsync();
 
 
-            BotUser = new SlackUser()
-            {
-                Id = teamData.self.Value<string>("id"),
-                Name = teamData.self.Value<string>("name")
-            };
 
             Team = SlackTeam.FromData(teamData, api);
 

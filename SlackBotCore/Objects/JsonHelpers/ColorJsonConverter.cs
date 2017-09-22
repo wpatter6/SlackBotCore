@@ -14,7 +14,10 @@ namespace SlackBotCore.Objects.JsonHelpers
 
         public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
         {
-            return (Color)new ColorConverter().ConvertFromString((string)existingValue);
+            if (existingValue is string)
+                return (Color)new ColorConverter().ConvertFromString((string)existingValue);
+
+            return existingValue;
         }
 
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
