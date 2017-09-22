@@ -15,9 +15,12 @@ namespace SlackBotWebApi.Controllers
 
         public JsonResult Connect(string code)
         {
+            Dictionary<string, string> result = new Dictionary<string, string>();
 
-
-            return new JsonResult("ok");
+            result.Add("status", "ok");
+            result.Add("code", code);
+            
+            return new JsonResult(result);
         }
     }
 }
