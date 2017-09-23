@@ -7,13 +7,8 @@ using Newtonsoft.Json;
 
 namespace SlackBotCore.Objects
 {
-    public class SlackChannel
+    public class SlackChannel : SlackBaseApiObject
     {
-        [JsonIgnore]
-        private SlackBotApi api;
-        [JsonIgnore]
-        private SlackUser user;
-
         [JsonProperty("id")]
         public string Id;
 
@@ -32,15 +27,19 @@ namespace SlackBotCore.Objects
         [JsonIgnore]
         public List<SlackUser> Members = new List<SlackUser>();
 
-        public SlackChannel(SlackBotApi api, SlackUser user)
+        public SlackChannel(SlackBotApi api)
         {
-            this.api = api;
-            this.user = user;
+            SetApi(api);
         }
 
         public async Task<SlackMessage> SendMessageAsync(string text, params SlackAttachment[] attachments)
         {
-            return await api.SendMessageAsync(this, user, text, attachments);
+            return await Api.SendMessageAsync(this, Team.BotUser, text, attachments);
+        }
+
+        public async Task<SlackEphemeral> SendEphemeralAsync(SlackUser user, string text, params SlackAttachment[] attachments)
+        {
+            return await Api.SendEphemeralAsync(user, this, text, attachments);
         }
     }
 }

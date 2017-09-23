@@ -2,6 +2,14 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp2.0</TargetFramework>
+    <PackageId>SlackBotCore</PackageId>
+    <PackageVersion>0.9.0</PackageVersion>
+    <Authors>wpatter6</Authors>
+    <Description></Description>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <PackageReleaseNotes>Initial release.  Supports basic messaging with embeds and chat events.</PackageReleaseNotes>
+    <Copyright>Copyright 2017 (c) wpatter6</Copyright>
+    <PackageTags>Slack Bot Core .NET dotnet</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

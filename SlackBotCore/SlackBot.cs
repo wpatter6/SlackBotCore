@@ -122,8 +122,14 @@ namespace SlackBotCore
             {
                 case "file":
                     args = new ReactionAddedEventArgs(reaction,
-                        new SlackFile(data.item.Value<string>("file"),
+                        Team.Users.FirstOrDefault(x => x.Id == data.Value<string>("user")),
+                        new SlackFile(api, data.item.Value<string>("file"),
                         Team.Users.FirstOrDefault(x => x.Id == data.Value<string>("item_user"))));
+                    break;
+                case "file_comment":
+                    args = new ReactionAddedEventArgs(reaction,
+                        Team.Users.FirstOrDefault(x => x.Id == data.Value<string>("user")),
+                        new SlackFileComment(api, data.item.Value<string>("file_comment")));
                     break;
                 default:
                     args = new ReactionAddedEventArgs(reaction,

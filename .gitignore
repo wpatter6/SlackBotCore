@@ -1,10 +1,11 @@
 *.config
 *.db
+*.pubxml
+*.user
+*.nupkg
 **/bin/**
 **/obj/**
 **/.vs/**
-*.pubxml
-*.user
 **/Releases/**
 
 # Windows image file caches

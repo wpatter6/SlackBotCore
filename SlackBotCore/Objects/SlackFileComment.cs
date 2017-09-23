@@ -5,18 +5,19 @@ using System.Threading.Tasks;
 
 namespace SlackBotCore.Objects
 {
-    public class SlackFile : SlackBaseApiObject
+    public class SlackFileComment : SlackBaseApiObject
     {
-        public readonly string Id;
-        public readonly SlackUser User;
+        public string Id;
 
-        public SlackFile(SlackBotApi api, string id, SlackUser user)
+        public string Text;
+
+        public SlackFileComment(SlackBotApi api, string id, string text = null)
         {
             SetApi(api);
             Id = id;
-            User = user;
+            Text = text;
         }
-
+        
         public async Task<SlackResponse> AddReactionAsync(string emojiName)
         {
             return await Api.AddReactionAsync(this, emojiName);

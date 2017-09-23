@@ -1,23 +1,40 @@
-﻿using Newtonsoft.Json.Linq;
-using System;
+﻿using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Web;
+using System.ComponentModel;
 using SlackBotCore.Objects;
 using SlackBotCore.Objects.JsonHelpers;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using System.Reflection;
 
 namespace SlackBotCore
 {
     public enum ApiCommands
     {
+        [Description("rtm.start")]
         Connect,
+        [Description("chat.postMessage")]
         Message,
+        [Description("chat.postEphemeral")]
+        Ephemeral,
+        [Description("chat.delete")]
         Delete,
+        [Description("chat.update")]
         Update,
-        Token
+        [Description("oauth.access")]
+        Token,
+        [Description("reactions.add")]
+        AddReaction,
+        [Description("reactions.remove")]
+        RemoveReaction,
+        [Description("stars.add")]
+        AddStar,
+        [Description("stars.remove")]
+        RemoveStar
     }
 
     public class SlackBotApi
@@ -28,6 +45,12 @@ namespace SlackBotCore
         }
 
         #region public
+        public async Task<JObject> GetConnectionAsync()
+        {
+            return await GetApiData(ApiCommands.Connect);
+        }
+
+        #region messages
         public async Task<SlackMessage> SendMessageAsync(SlackMessage message)
         {
             return await SendMessageAsync(message.Channel, message.User, message.Text, message.Attachments.ToArray());
@@ -76,37 +99,121 @@ namespace SlackBotCore
             return result;
         }
 
-        public async Task DeleteMessageAsync(SlackMessage message)
+        public async Task<SlackResponse> DeleteMessageAsync(SlackMessage message)
         {
-            await DeleteMessageAsync(message.Channel.Id, message.Id);
+            return await DeleteMessageAsync(message.Channel, message.Id);
         }
 
-        public async Task DeleteMessageAsync(string channel, string ts)
+        public async Task<SlackResponse> DeleteMessageAsync(SlackChannel channel, string ts)
         {
-            await GetApiData(ApiCommands.Delete, null,
-                new KeyValuePair<string, string>("channel", channel),
+            return await GetApiData<SlackResponse>(ApiCommands.Delete, null,
+                new KeyValuePair<string, string>("channel", channel.Id),
                 new KeyValuePair<string, string>("ts", ts));
         }
 
-        public async Task<JObject> GetConnectionAsync()
+        public async Task<SlackEphemeral> SendEphemeralAsync(SlackUser user, SlackChannel channel, string text, params SlackAttachment[] attachments)
         {
-            return await GetApiData(ApiCommands.Connect);
+            var result = await GetApiData<SlackEphemeral>(ApiCommands.Ephemeral, null,
+                new KeyValuePair<string, string>("user", user.Id),
+                new KeyValuePair<string, string>("channel", channel.Id),
+                new KeyValuePair<string, string>("text", text));
+
+            result.User = user;
+            result.Channel = channel;
+
+            return result;
         }
+        #endregion
+
+        #region stars/reactions
+        public async Task<SlackResponse> AddReactionAsync(SlackMessage message, string emojiName)
+        {
+            return await GetApiData<SlackResponse>(ApiCommands.AddReaction, null,
+                new KeyValuePair<string, string>("channel", message.Channel.Id),
+                new KeyValuePair<string, string>("timestamp", message.Id),
+                new KeyValuePair<string, string>("name", emojiName));
+        }
+
+        public async Task<SlackResponse> AddReactionAsync(SlackFile file, string emojiName)
+        {
+            return await GetApiData<SlackResponse>(ApiCommands.AddReaction, null,
+                new KeyValuePair<string, string>("file", file.Id),
+                new KeyValuePair<string, string>("name", emojiName));
+        }
+
+        public async Task<SlackResponse> AddReactionAsync(SlackFileComment fileComment, string emojiName)
+        {
+            return await GetApiData<SlackResponse>(ApiCommands.AddReaction, null,
+                new KeyValuePair<string, string>("file_comment", fileComment.Id),
+                new KeyValuePair<string, string>("name", emojiName));
+        }
+
+        public async Task<SlackResponse> RemoveReactionAsync(SlackMessage message, string emojiName)
+        {
+            return await GetApiData<SlackResponse>(ApiCommands.RemoveReaction, null,
+                new KeyValuePair<string, string>("channel", message.Channel.Id),
+                new KeyValuePair<string, string>("timestamp", message.Id),
+                new KeyValuePair<string, string>("name", emojiName));
+        }
+
+        public async Task<SlackResponse> RemoveReactionAsync(SlackFile file, string emojiName)
+        {
+            return await GetApiData<SlackResponse>(ApiCommands.RemoveReaction, null,
+                new KeyValuePair<string, string>("file", file.Id),
+                new KeyValuePair<string, string>("name", emojiName));
+        }
+
+        public async Task<SlackResponse> RemoveReactionAsync(SlackFileComment fileComment, string emojiName)
+        {
+            return await GetApiData<SlackResponse>(ApiCommands.RemoveReaction, null,
+                new KeyValuePair<string, string>("file_comment", fileComment.Id),
+                new KeyValuePair<string, string>("name", emojiName));
+        }
+
+        public async Task<SlackResponse> AddStarAsync(SlackMessage message)
+        {
+            return await GetApiData<SlackResponse>(ApiCommands.AddStar, null,
+                new KeyValuePair<string, string>("channel", message.Channel.Id),
+                new KeyValuePair<string, string>("timestamp", message.Id));
+        }
+
+        public async Task<SlackResponse> AddStarAsync(SlackFile file)
+        {
+            return await GetApiData<SlackResponse>(ApiCommands.AddStar, null,
+                new KeyValuePair<string, string>("file", file.Id));
+        }
+
+        public async Task<SlackResponse> AddStarAsync(SlackFileComment fileComment)
+        {
+            return await GetApiData<SlackResponse>(ApiCommands.AddStar, null,
+                new KeyValuePair<string, string>("file_comment", fileComment.Id));
+        }
+
+        public async Task<SlackResponse> RemoveStarAsync(SlackMessage message)
+        {
+            return await GetApiData<SlackResponse>(ApiCommands.RemoveStar, null,
+                new KeyValuePair<string, string>("channel", message.Channel.Id),
+                new KeyValuePair<string, string>("timestamp", message.Id));
+        }
+
+        public async Task<SlackResponse> RemoveStarAsync(SlackFile file)
+        {
+            return await GetApiData<SlackResponse>(ApiCommands.RemoveStar, null,
+                new KeyValuePair<string, string>("file", file.Id));
+        }
+
+        public async Task<SlackResponse> RemoveStarAsync(SlackFileComment fileComment)
+        {
+            return await GetApiData<SlackResponse>(ApiCommands.RemoveStar, null,
+                new KeyValuePair<string, string>("file_comment", fileComment.Id));
+        }
+        #endregion
         #endregion
 
         #region private
         private string token;
         private string urlBase = "https://slack.com/api/";
         
-        private Dictionary<ApiCommands, string> CommandDictionary = new Dictionary<ApiCommands, string>(new KeyValuePair<ApiCommands, string>[]
-        {
-            new KeyValuePair<ApiCommands, string>(ApiCommands.Connect, "rtm.start"),
-            new KeyValuePair<ApiCommands, string>(ApiCommands.Message, "chat.postMessage"),
-            new KeyValuePair<ApiCommands, string>(ApiCommands.Delete, "chat.delete"),
-            new KeyValuePair<ApiCommands, string>(ApiCommands.Update, "chat.update"),
-            new KeyValuePair<ApiCommands, string>(ApiCommands.Token, "oauth.access")
-        });
-
         private async Task<TResult> GetApiDataProperty<TResult>(ApiCommands commandType, string propertyName, string [] ignoreProperties = null, params KeyValuePair<string, string>[] queryParameters)
         {
             var jobj = await GetApiData(commandType, null, queryParameters);
@@ -174,7 +281,6 @@ namespace SlackBotCore
         {
             var settings = new JsonSerializerSettings
             {
-                ContractResolver = new GetOnlyContractResolver(),
                 NullValueHandling = NullValueHandling.Ignore
             };
 
@@ -183,7 +289,7 @@ namespace SlackBotCore
 
         private Uri GetApiUri(ApiCommands commandType, params KeyValuePair<string, string>[] queryParameters)
         {
-            var builder = new UriBuilder(string.Format("{0}{1}", urlBase, CommandDictionary[commandType]));
+            var builder = new UriBuilder(string.Format("{0}{1}", urlBase, GetEnumDescription(commandType)));
 
             var query = HttpUtility.ParseQueryString(builder.Query);
             query["token"] = token;
@@ -194,6 +300,22 @@ namespace SlackBotCore
             builder.Query = query.ToString();
 
             return builder.Uri;
+        }
+
+        private string GetEnumDescription(Enum value)
+        {
+            FieldInfo fi = value.GetType().GetField(value.ToString());
+
+            DescriptionAttribute[] attributes =
+                (DescriptionAttribute[])fi.GetCustomAttributes(
+                typeof(DescriptionAttribute),
+                false);
+
+            if (attributes != null &&
+                attributes.Length > 0)
+                return attributes[0].Description;
+            else
+                return value.ToString();
         }
         #endregion
     }

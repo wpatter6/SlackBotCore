@@ -6,10 +6,8 @@ using Newtonsoft.Json;
 
 namespace SlackBotCore.Objects
 {
-    public class SlackTeam
+    public class SlackTeam : SlackBaseApiObject
     {
-        [JsonIgnore]
-        private SlackBotApi api;
         [JsonIgnore]
         public SlackUser BotUser;
 
@@ -28,10 +26,9 @@ namespace SlackBotCore.Objects
         [JsonIgnore]
         public List<SlackUser> Users = new List<SlackUser>();
 
-        public SlackTeam(SlackBotApi api, SlackUser user = null)
+        public SlackTeam(SlackBotApi api)
         {
-            BotUser = user;
-            this.api = api;
+            SetApi(api);
         }
 
         public SlackChannel GetChannel(string id)
@@ -61,7 +58,7 @@ namespace SlackBotCore.Objects
             foreach(var u in data.users)
             {
                 if (!u.Value<bool>("deleted"))
-                    team.Users.Add(new SlackUser()
+                    team.Users.Add(new SlackUser(api)
                     {
                         Id = u.Value<string>("id"),
                         Name = u.Value<string>("name")
@@ -71,7 +68,7 @@ namespace SlackBotCore.Objects
             foreach(var c in data.channels)
             {
                 if (c == null) continue;
-                var channel = new SlackChannel(api, team.BotUser)
+                var channel = new SlackChannel(api)
                 {
                     Id = c.Value<string>("id"),
                     Name = c.Value<string>("name"),

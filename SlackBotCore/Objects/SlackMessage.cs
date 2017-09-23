@@ -7,22 +7,15 @@ using System.Threading.Tasks;
 
 namespace SlackBotCore.Objects
 {
-    public class SlackMessage
+    public class SlackMessage : SlackBaseApiObject
     {
         [JsonIgnore]
-        [GetOnlyJsonProperty]
-        private SlackBotApi api;
-
-        [JsonIgnore]
-        [GetOnlyJsonProperty]
         public SlackChannel Channel;
 
         [JsonIgnore]
-        [GetOnlyJsonProperty]
         public SlackUser User;
 
         [JsonIgnore]
-        [GetOnlyJsonProperty]
         public DateTime Timestamp;
 
         [JsonProperty("ts")]
@@ -38,7 +31,7 @@ namespace SlackBotCore.Objects
 
         public SlackMessage(SlackBotApi api, string id, string text, SlackChannel channel, SlackUser user, DateTime? timestamp = null, params SlackAttachment[] attachments)
         {
-            this.api = api;
+            SetApi(api);
             Id = id;
             Text = text;
             Channel = channel;
@@ -47,14 +40,9 @@ namespace SlackBotCore.Objects
             Attachments = new List<SlackAttachment>(attachments);
         }
         
-        public void SetApi(SlackBotApi api)
+        public async Task<SlackResponse> DeleteAsync()
         {
-            this.api = api;
-        }
-
-        public async Task DeleteAsync()
-        {
-            await api.DeleteMessageAsync(Channel.Id, Id);
+            return await Api.DeleteMessageAsync(Channel, Id);
         }
 
         public async Task<SlackMessage> UpdateAsync(string text = null, params SlackAttachment[] attachments)
@@ -63,10 +51,30 @@ namespace SlackBotCore.Objects
 
             Attachments = new List<SlackAttachment>(attachments);
 
-            var result = await api.UpdateMessageAsync(this);
+            var result = await Api.UpdateMessageAsync(this);
             Id = result.Id;
 
             return this;
+        }
+
+        public async Task<SlackResponse> AddReactionAsync(string emojiName)
+        {
+            return await Api.AddReactionAsync(this, emojiName);
+        }
+
+        public async Task<SlackResponse> RemoveReactionAsync(string emojiName)
+        {
+            return await Api.RemoveReactionAsync(this, emojiName);
+        }
+
+        public async Task<SlackResponse> AddStarAsync()
+        {
+            return await Api.AddStarAsync(this);
+        }
+
+        public async Task<SlackResponse> RemoveStarAsync()
+        {
+            return await Api.RemoveStarAsync(this);
         }
     }
 }
