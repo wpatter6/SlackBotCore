@@ -3,6 +3,7 @@
 *.pubxml
 *.user
 *.nupkg
+**/nupkgs/**
 **/bin/**
 **/obj/**
 **/.vs/**
